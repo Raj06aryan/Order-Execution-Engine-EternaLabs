@@ -1,5 +1,9 @@
 # Order Execution Engine
 
+### 🚀 Live Deployment
+
+**Base URL:** `https://order-execution-engine-eternalabs-production.up.railway.app`
+
 A high-frequency trading (HFT) style order execution engine built with Node.js, Fastify, BullMQ, and PostgreSQL. This system simulates routing orders to Solana DEXs (Raydium and Meteora) to find the best price execution.
 
 ## 🚀 Features

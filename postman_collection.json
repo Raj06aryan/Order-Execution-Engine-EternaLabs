@@ -20,7 +20,7 @@
           "raw": "{\n    \"tokenIn\": \"SOL\",\n    \"tokenOut\": \"USDC\",\n    \"amountIn\": 10,\n    \"userId\": \"user_123\"\n}"
         },
         "url": {
-          "raw": "http://localhost:3000/orders",
+          "raw": "order-execution-engine-eternalabs-production.up.railway.app/orders",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3000",
@@ -35,7 +35,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/orders",
+          "raw": "order-execution-engine-eternalabs-production.up.railway.app/orders",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3000",
@@ -50,7 +50,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:3000/health",
+          "raw": "order-execution-engine-eternalabs-production.up.railway.app/health",
           "protocol": "http",
           "host": ["localhost"],
           "port": "3000",
