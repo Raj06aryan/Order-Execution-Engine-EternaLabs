@@ -95,7 +95,7 @@ export const setupOrderWorker = () => {
         },
         {
             connection: redis,
-            concurrency: 5, // Process 5 orders at once
+            concurrency: 10, // Process 10 orders at once (per requirements)
         }
     );
 
