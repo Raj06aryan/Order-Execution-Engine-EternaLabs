@@ -5,6 +5,7 @@ import { redis } from './config/redis';
 import fs from 'fs';
 import path from 'path';
 import routes from './routes';
+import { setupOrderWorker } from './services/queue/orderWorker';
 
 dotenv.config();
 
@@ -30,7 +31,10 @@ server.get('/health', async (request, reply) => {
 
         // Test Redis Connection
         await redis.ping();
-        console.log('Connected to Redis');
+        console.log('✅ Connected to Redis');
+
+        // Start Worker
+        setupOrderWorker();
 
         const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
         await server.listen({ port, host: '0.0.0.0' });
