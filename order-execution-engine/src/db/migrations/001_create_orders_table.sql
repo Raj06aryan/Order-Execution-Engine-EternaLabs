@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  order_id VARCHAR(255) UNIQUE NOT NULL,
+  user_id VARCHAR(255) NOT NULL,
+  token_in VARCHAR(50) NOT NULL,
+  token_out VARCHAR(50) NOT NULL,
+  amount_in DECIMAL(20, 8) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  execution_price DECIMAL(20, 8),
+  tx_hash VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
