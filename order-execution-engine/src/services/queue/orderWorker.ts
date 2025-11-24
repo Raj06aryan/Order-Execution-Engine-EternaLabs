@@ -2,24 +2,46 @@ import { Worker, Job } from 'bullmq';
 import { redis } from '../../config/redis';
 import { ORDER_QUEUE_NAME } from './orderQueue';
 import { query } from '../../db/client';
+import { SmartRouter } from '../dex/SmartRouter';
+
+const smartRouter = new SmartRouter();
 
 export const setupOrderWorker = () => {
     const worker = new Worker(
         ORDER_QUEUE_NAME,
         async (job: Job) => {
-            console.log(`Processing order ${job.data.orderId}...`);
+            const { orderId, tokenIn, tokenOut, amountIn } = job.data;
+            console.log(`Processing order ${orderId}...`);
 
-            // Simulate processing time
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            try {
+                // Update status to processing
+                await query('UPDATE orders SET status = $1 WHERE order_id = $2', ['processing', orderId]);
 
-            // Update status in DB to 'processing'
-            await query('UPDATE orders SET status = $1 WHERE order_id = $2', ['processing', job.data.orderId]);
+                // 1. Get Best Quote
+                console.log(`🔍 Finding best route for ${amountIn} ${tokenIn} -> ${tokenOut}...`);
+                const bestQuote = await smartRouter.getBestQuote(tokenIn, tokenOut, amountIn);
+                console.log(`✅ Best route found: ${bestQuote.dex} @ ${bestQuote.price} (Out: ${bestQuote.amountOut})`);
 
-            // TODO: Call DEX Router here (Task 5)
-            console.log(`Order ${job.data.orderId} processed successfully (Mock)`);
+                // 2. Execute Trade
+                const result = await smartRouter.executeTrade(orderId, bestQuote);
 
-            // Update status in DB to 'completed'
-            await query('UPDATE orders SET status = $1 WHERE order_id = $2', ['completed', job.data.orderId]);
+                if (result.status === 'success') {
+                    // 3. Update DB with success
+                    await query(
+                        `UPDATE orders 
+             SET status = 'completed', execution_price = $1, tx_hash = $2, updated_at = NOW() 
+             WHERE order_id = $3`,
+                        [bestQuote.price, result.txHash, orderId]
+                    );
+                    console.log(`🎉 Order ${orderId} completed! Tx: ${result.txHash}`);
+                } else {
+                    throw new Error('Trade execution failed');
+                }
+
+            } catch (error: any) {
+                console.error(`❌ Order ${orderId} failed:`, error);
+                await query('UPDATE orders SET status = $1 WHERE order_id = $2', ['failed', orderId]);
+            }
         },
         {
             connection: redis,
