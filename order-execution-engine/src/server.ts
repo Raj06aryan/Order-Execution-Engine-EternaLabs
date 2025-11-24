@@ -6,11 +6,29 @@ import fs from 'fs';
 import path from 'path';
 import routes from './routes';
 import { setupOrderWorker } from './services/queue/orderWorker';
+import websocket from '@fastify/websocket';
+import { connectionManager } from './services/websocket/connectionManager';
 
 dotenv.config();
 
 const server = Fastify({
     logger: true
+});
+
+server.register(websocket);
+server.register(async function (fastify) {
+    fastify.get('/ws', { websocket: true }, (connection, req) => {
+        // Simple auth: expect ?userId=123 in query params
+        const query = req.query as { userId?: string };
+        const userId = query.userId;
+
+        if (!userId) {
+            connection.close();
+            return;
+        }
+
+        connectionManager.addConnection(userId, connection);
+    });
 });
 
 server.register(routes);
