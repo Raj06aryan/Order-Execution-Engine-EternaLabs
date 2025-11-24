@@ -4,6 +4,7 @@ import { ORDER_QUEUE_NAME } from './orderQueue';
 import { query } from '../../db/client';
 import { SmartRouter } from '../dex/SmartRouter';
 import { connectionManager } from '../websocket/connectionManager';
+import { RetryableError, FatalError } from '../../utils/errors';
 
 const smartRouter = new SmartRouter();
 
@@ -26,8 +27,18 @@ export const setupOrderWorker = () => {
                 });
 
                 // 1. Get Best Quote
+                // Simulate a random network error for testing retry logic
+                if (Math.random() < 0.1) { // 10% chance of network failure
+                    throw new RetryableError('Network glitch: Failed to fetch quotes');
+                }
+
                 console.log(`🔍 Finding best route for ${amountIn} ${tokenIn} -> ${tokenOut}...`);
                 const bestQuote = await smartRouter.getBestQuote(tokenIn, tokenOut, amountIn);
+
+                if (!bestQuote) {
+                    throw new FatalError('No liquidity found for this pair');
+                }
+
                 console.log(`✅ Best route found: ${bestQuote.dex} @ ${bestQuote.price} (Out: ${bestQuote.amountOut})`);
 
                 // 2. Execute Trade
@@ -52,20 +63,34 @@ export const setupOrderWorker = () => {
                         executionPrice: bestQuote.price
                     });
                 } else {
-                    throw new Error('Trade execution failed');
+                    throw new RetryableError('Trade execution failed on DEX');
                 }
 
             } catch (error: any) {
-                console.error(`❌ Order ${orderId} failed:`, error);
-                await query('UPDATE orders SET status = $1 WHERE order_id = $2', ['failed', orderId]);
+                console.error(`❌ Order ${orderId} failed:`, error.message);
+
+                const isRetryable = error instanceof RetryableError || error.name === 'RetryableError';
+                const status = isRetryable ? 'pending_retry' : 'failed';
+
+                // Update DB with error reason
+                await query(
+                    'UPDATE orders SET status = $1, error_reason = $2, retry_count = retry_count + 1 WHERE order_id = $3',
+                    [status === 'pending_retry' ? 'processing' : 'failed', error.message, orderId]
+                );
 
                 // WS Update: Failed
                 connectionManager.sendUpdate(userId, {
                     type: 'ORDER_UPDATE',
                     orderId,
                     status: 'failed',
-                    error: error.message
+                    error: error.message,
+                    isRetryable
                 });
+
+                // Re-throw if retryable so BullMQ knows to retry
+                if (isRetryable) {
+                    throw error;
+                }
             }
         },
         {

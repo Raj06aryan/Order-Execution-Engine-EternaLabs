@@ -41,11 +41,19 @@ server.get('/health', async (request, reply) => {
         const dbRes = await pool.query('SELECT NOW()');
         console.log('Connected to PostgreSQL (Neon):', dbRes.rows[0].now);
 
-        // Run Migration
-        const migrationPath = path.join(__dirname, 'db/migrations/001_create_orders_table.sql');
-        const migrationSql = fs.readFileSync(migrationPath, 'utf-8');
-        await pool.query(migrationSql);
-        console.log('Database migrations applied');
+        // Run Migrations
+        const migrationsDir = path.join(__dirname, process.env.NODE_ENV === 'production' ? 'db/migrations' : '../src/db/migrations');
+        if (fs.existsSync(migrationsDir)) {
+            const files = fs.readdirSync(migrationsDir).sort();
+            for (const file of files) {
+                if (file.endsWith('.sql')) {
+                    const filePath = path.join(migrationsDir, file);
+                    const sql = fs.readFileSync(filePath, 'utf-8');
+                    await pool.query(sql);
+                    console.log(`✅ Applied migration: ${file}`);
+                }
+            }
+        }
 
         // Test Redis Connection
         await redis.ping();
