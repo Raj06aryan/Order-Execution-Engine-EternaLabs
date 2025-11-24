@@ -1,5 +1,8 @@
 # Order Execution Engine
 
+### Submission Video
+[![Watch the video](https://img.youtube.com/vi/cSss4OpEUF0/maxresdefault.jpg)](https://www.youtube.com/watch?v=cSss4OpEUF0)
+
 ### 🚀 Live Deployment
 
 **Base URL:** `https://order-execution-engine-eternalabs-production.up.railway.app`
