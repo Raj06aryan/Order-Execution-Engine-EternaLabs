@@ -4,6 +4,7 @@ import { pool } from './db/client';
 import { redis } from './config/redis';
 import fs from 'fs';
 import path from 'path';
+import routes from './routes';
 
 dotenv.config();
 
@@ -11,11 +12,11 @@ const server = Fastify({
     logger: true
 });
 
+server.register(routes);
+
 server.get('/health', async (request, reply) => {
     return { status: 'ok', timestamp: new Date().toISOString() };
-});
-
-const start = async () => {
+}); const start = async () => {
     try {
         // Test DB Connection
         const dbRes = await pool.query('SELECT NOW()');
